@@ -1,0 +1,118 @@
+version: "3.8"
+
+services:
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: es01
+    environment:
+      - node.name=es01
+      - cluster.name=docube-es-cluster
+
+      - discovery.type=single-node
+
+      # multi-node
+      # - discovery.seed_hosts=es02,es03
+      # - cluster.initial_master_nodes=es01,es02,es03
+
+      - ELASTIC_PASSWORD=horob1@2410
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      # - xpack.security.transport.ssl.enabled=false
+
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+    volumes:
+      - es01_data:/usr/share/elasticsearch/data
+
+    ports:
+      - "9112:9200"
+
+    networks:
+      - horob1_docub
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -u elastic:horob1@2410 http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+
+
+  # ===============================
+  # ❌ COMMENT ES02
+  # ===============================
+  # es02:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+  #   container_name: es02
+  #   environment:
+  #     - node.name=es02
+  #     - cluster.name=docube-es-cluster
+  #     - discovery.seed_hosts=es01,es03
+  #     - cluster.initial_master_nodes=es01,es02,es03
+  #     - ELASTIC_PASSWORD=horob1@2410
+  #     - bootstrap.memory_lock=true
+  #     - xpack.security.enabled=true
+  #     - xpack.security.http.ssl.enabled=false
+  #     - xpack.security.transport.ssl.enabled=false
+  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #   volumes:
+  #     - es02_data:/usr/share/elasticsearch/data
+  #   networks:
+  #     - horob1_docub
+
+
+  # ===============================
+  # ❌ COMMENT ES03
+  # ===============================
+  # es03:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+  #   container_name: es03
+  #   environment:
+  #     - node.name=es03
+  #     - cluster.name=docube-es-cluster
+  #     - discovery.seed_hosts=es01,es02
+  #     - cluster.initial_master_nodes=es01,es02,es03
+  #     - ELASTIC_PASSWORD=horob1@2410
+  #     - bootstrap.memory_lock=true
+  #     - xpack.security.enabled=true
+  #     - xpack.security.http.ssl.enabled=false
+  #     - xpack.security.transport.ssl.enabled=false
+  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #   volumes:
+  #     - es03_data:/usr/share/elasticsearch/data
+  #   networks:
+  #     - horob1_docub
+
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es01:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=horob1@2410
+    ports:
+      - "5601:5601"
+    depends_on:
+      es01:
+        condition: service_healthy
+    networks:
+      - horob1_docub
+
+
+volumes:
+  es01_data:
+    driver: local
+  es02_data:
+    driver: local
+  es03_data:
+    driver: local
+
+networks:
+  horob1_docub:
+    external: true

@@ -1,0 +1,115 @@
+# ============================================================
+# Search Service — Docker Compose DEV
+# ============================================================
+# Bao gồm: Elasticsearch (single-node) + Kibana + Search Service (profile=dev)
+# Mạng: horob1_docub (external) — kết nối với các service khác
+#
+# Chạy:
+#   docker network create horob1_docub    (lần đầu)
+#   docker compose -f docker-compose.dev.yml up -d --build
+#
+# Test UI:  http://localhost:9111
+# Kibana:   http://localhost:5601
+# ES:       http://localhost:9112
+# Health:   http://localhost:9111/actuator/health
+# ============================================================
+
+version: "3.8"
+
+services:
+
+  # ==================== Elasticsearch (single-node, dev) ====================
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    container_name: ss-es01-dev
+    environment:
+      - node.name=es01
+      - cluster.name=docube-es-cluster
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=horob1@2410
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es01_dev_data:/usr/share/elasticsearch/data
+    ports:
+      - "9112:9200"
+    networks:
+      - horob1_docub
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -u elastic:horob1@2410 http://localhost:9200/_cluster/health | grep -vq '\"status\":\"red\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ==================== Kibana (dev only) ====================
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: ss-kibana-dev
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es01:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=horob1@2410
+    ports:
+      - "5601:5601"
+    depends_on:
+      es01:
+        condition: service_healthy
+    networks:
+      - horob1_docub
+
+  # ==================== Search Service (dev) ====================
+  search-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ss-search-dev
+    environment:
+      # Profile = dev → TestController + Test UI enabled
+      - SPRING_PROFILES_ACTIVE=dev
+      - JAVA_OPTS=-Xms256m -Xmx512m
+
+      # Elasticsearch: connect to es01 via Docker internal network (port 9200)
+      - SPRING_ELASTICSEARCH_URIS=http://es01:9200
+      - SPRING_ELASTICSEARCH_USERNAME=elastic
+      - SPRING_ELASTICSEARCH_PASSWORD=horob1@2410
+
+      # Redis: connect via Docker network hostname
+      - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-redis}
+      - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD:-2410}
+
+      # Kafka: connect via Docker network hostname
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP:-kafka:7092}
+
+      # Eureka: connect via Docker network hostname
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=${EUREKA_URL:-http://eureka-server:9000/eureka}
+    ports:
+      - "9111:9111"
+    depends_on:
+      es01:
+        condition: service_healthy
+    networks:
+      - horob1_docub
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9111/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  es01_dev_data:
+    driver: local
+
+networks:
+  horob1_docub:
+    external: true
+

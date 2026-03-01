@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Search Service — Test Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+        /* Header */
+        .header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-bottom: 1px solid #334155; padding: 16px 24px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; }
+        .header h1 { font-size: 20px; font-weight: 700; }
+        .header .badge { background: #22c55e; color: #000; font-size: 11px; padding: 2px 8px; border-radius: 9999px; font-weight: 600; }
+
+        /* Layout */
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: #1e293b; padding: 4px; border-radius: 12px; flex-wrap: wrap; }
+        .tab { padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; color: #94a3b8; border: none; background: none; transition: all 0.2s; }
+        .tab:hover { color: #e2e8f0; background: #334155; }
+        .tab.active { background: #3b82f6; color: #fff; }
+
+        /* Panels */
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        /* Cards */
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+        .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        /* Form */
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 12px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input, .form-group select, .form-group textarea {
+            background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px;
+            color: #e2e8f0; font-size: 14px; outline: none; transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #3b82f6; }
+        .form-group textarea { resize: vertical; min-height: 60px; }
+
+        /* Buttons */
+        .btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: #3b82f6; color: #fff; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: #22c55e; color: #000; }
+        .btn-success:hover { background: #16a34a; color: #fff; }
+        .btn-warning { background: #f59e0b; color: #000; }
+        .btn-warning:hover { background: #d97706; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-outline { background: none; border: 1px solid #334155; color: #94a3b8; }
+        .btn-outline:hover { border-color: #3b82f6; color: #3b82f6; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+
+        /* Results */
+        .results { margin-top: 16px; }
+        .result-meta { font-size: 13px; color: #94a3b8; margin-bottom: 12px; display: flex; gap: 16px; flex-wrap: wrap; }
+        .result-meta span { background: #334155; padding: 4px 10px; border-radius: 6px; }
+        .result-item { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-bottom: 8px; transition: border-color 0.2s; }
+        .result-item:hover { border-color: #3b82f6; }
+        .result-item h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+        .result-item h3 em { color: #fbbf24; font-style: normal; background: rgba(251, 191, 36, 0.15); padding: 0 2px; border-radius: 2px; }
+        .result-item p { font-size: 13px; color: #94a3b8; margin-bottom: 4px; }
+        .result-item p em { color: #fbbf24; font-style: normal; background: rgba(251, 191, 36, 0.15); padding: 0 2px; border-radius: 2px; }
+        .result-item .tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+        .result-item .tag { background: #334155; color: #93c5fd; font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+        .result-item .stats { display: flex; gap: 12px; margin-top: 8px; font-size: 12px; color: #64748b; }
+
+        /* JSON viewer */
+        .json-viewer { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12px; line-height: 1.6; max-height: 400px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+
+        /* Status */
+        .status-bar { display: flex; gap: 12px; align-items: center; padding: 12px 16px; background: #0f172a; border-radius: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .status-dot.green { background: #22c55e; }
+        .status-dot.red { background: #ef4444; }
+        .status-dot.yellow { background: #f59e0b; }
+
+        /* Toast */
+        .toast-container { position: fixed; top: 70px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; }
+        .toast { padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s; max-width: 400px; }
+        .toast.success { background: #22c55e; color: #000; }
+        .toast.error { background: #ef4444; color: #fff; }
+        .toast.info { background: #3b82f6; color: #fff; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateY(-10px); } }
+
+        /* Loading */
+        .loading { display: inline-block; width: 16px; height: 16px; border: 2px solid #334155; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .tabs { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🔍 Search Service — Test Dashboard</h1>
+    <span class="badge" id="health-badge">checking...</span>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<div class="container">
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('generate')">🧪 Generate Data</button>
+        <button class="tab" onclick="switchTab('push-doc')">📄 Push Document Event</button>
+        <button class="tab" onclick="switchTab('push-author')">👤 Push Author Event</button>
+        <button class="tab" onclick="switchTab('search-doc')">🔍 Search Documents</button>
+        <button class="tab" onclick="switchTab('search-author')">🔍 Search Authors</button>
+        <button class="tab" onclick="switchTab('extras')">⚡ Suggest / Trending / Popular</button>
+        <button class="tab" onclick="switchTab('admin')">🔧 Admin</button>
+        <button class="tab" onclick="switchTab('health')">🩺 Health</button>
+    </div>
+
+    <!-- ==================== PANEL: Generate Data ==================== -->
+    <div class="panel active" id="panel-generate">
+        <div class="card">
+            <div class="card-title">🧪 Generate Sample Data (push vào Kafka → Consumer tự index vào ES)</div>
+            <p style="color:#94a3b8;font-size:13px;margin-bottom:16px;">
+                Nhấn nút để tạo dữ liệu mẫu. Dữ liệu được push qua Kafka topic → Consumer nhận → Index vào Elasticsearch.<br>
+                Chờ vài giây sau khi generate rồi mới search.
+            </p>
+            <div class="btn-group">
+                <button class="btn btn-success" onclick="generateDocs(5)">📄 Generate 5 Documents + 1 Author</button>
+                <button class="btn btn-success" onclick="generateDocs(10)">📄 Generate 10 Documents + 1 Author</button>
+                <button class="btn btn-primary" onclick="generateAuthors(5)">👤 Generate 5 Authors</button>
+                <button class="btn btn-primary" onclick="generateAuthors(10)">👤 Generate 10 Authors</button>
+            </div>
+            <div class="results" id="generate-result"></div>
+        </div>
+    </div>
+
+    <!-- ==================== PANEL: Push Document Event ==================== -->
+    <div class="panel" id="panel-push-doc">
+        <div class="card">
+            <div class="card-title">📄 Push Document Event vào Kafka</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Event Type</label>
+                    <select id="doc-eventType">
+                        <option value="DOCUMENT_CREATED">DOCUMENT_CREATED</option>
+                        <option value="DOCUMENT_UPDATED">DOCUMENT_UPDATED</option>
+                        <option value="DOCUMENT_DELETED">DOCUMENT_DELETED</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>ID</label>
+                    <input type="text" id="doc-id" placeholder="doc-001">
+                </div>
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="doc-title" placeholder="Hướng dẫn Spring Boot">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="doc-status">
+                        <option value="PUBLISHED">PUBLISHED</option>
+                        <option value="DRAFT">DRAFT</option>
+                        <option value="ARCHIVED">ARCHIVED</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Language</label>
+                    <select id="doc-language">
+                        <option value="vi">Vietnamese</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tags (comma-separated)</label>
+                    <input type="text" id="doc-tags" placeholder="spring, java, backend">
+                </div>
+                <div class="form-group">
+                    <label>Author ID</label>
+                    <input type="text" id="doc-authorId" placeholder="author-001">
+                </div>
+                <div class="form-group">
+                    <label>Author Display Name</label>
+                    <input type="text" id="doc-authorName" placeholder="John Doe">
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label>Description</label>
+                <textarea id="doc-desc" placeholder="Mô tả ngắn..."></textarea>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label>Content</label>
+                <textarea id="doc-content" placeholder="Nội dung bài viết..." rows="3"></textarea>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="pushDocEvent()">🚀 Push Event</button>
+                <button class="btn btn-outline" onclick="fillSampleDoc()">📝 Fill Sample Data</button>
+            </div>
+            <div class="results" id="push-doc-result"></div>
+        </div>
+    </div>
+
+    <!-- ==================== PANEL: Push Author Event ==================== -->
+    <div class="panel" id="panel-push-author">
+        <div class="card">
+            <div class="card-title">👤 Push Author Event vào Kafka</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Event Type</label>
+                    <select id="author-eventType">
+                        <option value="AUTHOR_CREATED">AUTHOR_CREATED</option>
+                        <option value="AUTHOR_UPDATED">AUTHOR_UPDATED</option>
+                        <option value="AUTHOR_DELETED">AUTHOR_DELETED</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>ID</label>
+                    <input type="text" id="author-id" placeholder="author-001">
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="author-username" placeholder="john_doe">
+                </div>
+                <div class="form-group">
+                    <label>Display Name</label>
+                    <input type="text" id="author-displayName" placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="text" id="author-email" placeholder="john@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Role</label>
+                    <select id="author-role">
+                        <option value="AUTHOR">AUTHOR</option>
+                        <option value="ADMIN">ADMIN</option>
+                        <option value="MODERATOR">MODERATOR</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="author-status">
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="INACTIVE">INACTIVE</option>
+                        <option value="BANNED">BANNED</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Phone</label>
+                    <input type="text" id="author-phone" placeholder="0901234567">
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+                <label>Bio</label>
+                <textarea id="author-bio" placeholder="Giới thiệu bản thân..."></textarea>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="pushAuthorEvent()">🚀 Push Event</button>
+                <button class="btn btn-outline" onclick="fillSampleAuthor()">📝 Fill Sample Data</button>
+            </div>
+            <div class="results" id="push-author-result"></div>
+        </div>
+    </div>
+
+    <!-- ==================== PANEL: Search Documents ==================== -->
+    <div class="panel" id="panel-search-doc">
+        <div class="card">
+            <div class="card-title">🔍 Search Documents</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Keyword</label>
+                    <input type="text" id="sdoc-keyword" placeholder="Spring Boot, Kafka...">
+                </div>
+                <div class="form-group">
+                    <label>Page</label>
+                    <input type="number" id="sdoc-page" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Size</label>
+                    <input type="number" id="sdoc-size" value="10" min="1" max="100">
+                </div>
+                <div class="form-group">
+                    <label>Sort By</label>
+                    <select id="sdoc-sortBy">
+                        <option value="relevance">Relevance</option>
+                        <option value="createdAt">Created At</option>
+                        <option value="viewCount">View Count</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Order</label>
+                    <select id="sdoc-order">
+                        <option value="desc">Descending</option>
+                        <option value="asc">Ascending</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status (optional)</label>
+                    <select id="sdoc-status">
+                        <option value="">All</option>
+                        <option value="PUBLISHED">PUBLISHED</option>
+                        <option value="DRAFT">DRAFT</option>
+                        <option value="ARCHIVED">ARCHIVED</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Author ID (optional)</label>
+                    <input type="text" id="sdoc-authorId" placeholder="">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="searchDocs()">🔍 Search</button>
+            <div class="results" id="search-doc-result"></div>
+        </div>
+    </div>
+
+    <!-- ==================== PANEL: Search Authors ==================== -->
+    <div class="panel" id="panel-search-author">
+        <div class="card">
+            <div class="card-title">🔍 Search Authors</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Keyword</label>
+                    <input type="text" id="sauth-keyword" placeholder="john, alice...">
+                </div>
+                <div class="form-group">
+                    <label>Page</label>
+                    <input type="number" id="sauth-page" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Size</label>
+                    <input type="number" id="sauth-size" value="10" min="1" max="100">
+                </div>
+                <div class="form-group">
+                    <label>Role (optional)</label>
+                    <select id="sauth-role">
+                        <option value="">All</option>
+                        <option value="AUTHOR">AUTHOR</option>
+                        <option value="ADMIN">ADMIN</option>
+                        <option value="MODERATOR">MODERATOR</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status (optional)</label>
+                    <select id="sauth-status">
+                        <option value="">All</option>
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="INACTIVE">INACTIVE</option>
+                        <option value="BANNED">BANNED</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="searchAuthors()">🔍 Search</button>
+            <div class="results" id="search-author-result"></div>
+        </div>
+    </div>
+
+    <!-- ==================== PANEL: Extras ==================== -->
+    <div class="panel" id="panel-extras">
+        <div class="card">
+            <div class="card-title">💡 Suggest (Autocomplete)</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Query prefix</label>
+                    <input type="text" id="suggest-q" placeholder="Hướng dẫn..." oninput="debounce(doSuggest, 300)()">
+                </div>
+                <div class="form-group">
+                    <label>Size</label>
+                    <input type="number" id="suggest-size" value="5" min="1" max="20">
+                </div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="doSuggest()">Suggest</button>
+            <div class="results" id="suggest-result"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🔥 Trending Documents</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Size</label>
+                    <input type="number" id="trending-size" value="10" min="1" max="50">
+                </div>
+            </div>
+            <button class="btn btn-warning btn-sm" onclick="getTrending()">🔥 Get Trending</button>
+            <div class="results" id="trending-result"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">⭐ Popular Authors</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Size</label>
+                    <input type="number" id="popular-size" value="10" min="1" max="50">
+                </div>
+            </div>
+            <button class="btn btn-warning btn-sm" onclick="getPopular()">⭐ Get Popular</button>
+            <div class="results" id="popular-result"></div>
+        </div>
+    </div>
+
+    <!-- ==================== PANEL: Admin ==================== -->
+    <div class="panel" id="panel-admin">
+        <div class="card">
+            <div class="card-title">🔧 Admin — Reindex</div>
+            <p style="color:#f87171;font-size:13px;margin-bottom:16px;">⚠️ Reindex sẽ xoá index hiện tại và tạo lại. Dữ liệu cần được repopulate qua Kafka events.</p>
+            <div class="btn-group">
+                <button class="btn btn-danger" onclick="reindex('documents')">🔄 Reindex Documents</button>
+                <button class="btn btn-danger" onclick="reindex('authors')">🔄 Reindex Authors</button>
+            </div>
+            <div class="results" id="admin-result"></div>
+        </div>
+    </div>
+
+    <!-- ==================== PANEL: Health ==================== -->
+    <div class="panel" id="panel-health">
+        <div class="card">
+            <div class="card-title">🩺 Health Check</div>
+            <button class="btn btn-primary btn-sm" onclick="checkHealth()" style="margin-bottom:12px;">🔄 Refresh</button>
+            <div id="health-result"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const BASE = '';
+
+    // ==================== Tab switching ====================
+    function switchTab(name) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('panel-' + name).classList.add('active');
+    }
+
+    // ==================== Toast ====================
+    function toast(msg, type = 'info') {
+        const c = document.getElementById('toasts');
+        const t = document.createElement('div');
+        t.className = 'toast ' + type;
+        t.textContent = msg;
+        c.appendChild(t);
+        setTimeout(() => t.remove(), 3000);
+    }
+
+    // ==================== API helpers ====================
+    async function api(method, path, body = null) {
+        const opts = { method, headers: { 'Content-Type': 'application/json' } };
+        if (body) opts.body = JSON.stringify(body);
+        const res = await fetch(BASE + path, opts);
+        return { status: res.status, data: await res.json() };
+    }
+
+    function jsonHtml(obj) {
+        return '<div class="json-viewer">' + syntaxHighlight(JSON.stringify(obj, null, 2)) + '</div>';
+    }
+
+    function syntaxHighlight(json) {
+        json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+            let cls = 'color:#f59e0b'; // number
+            if (/^"/.test(match)) {
+                if (/:$/.test(match)) { cls = 'color:#93c5fd'; } // key
+                else { cls = 'color:#86efac'; } // string
+            } else if (/true|false/.test(match)) { cls = 'color:#c084fc'; }
+            else if (/null/.test(match)) { cls = 'color:#f87171'; }
+            return '<span style="' + cls + '">' + match + '</span>';
+        });
+    }
+
+    // ==================== Debounce ====================
+    function debounce(fn, ms) {
+        let t;
+        return function () {
+            clearTimeout(t);
+            t = setTimeout(fn, ms);
+        };
+    }
+
+    // ==================== Generate ====================
+    async function generateDocs(count) {
+        toast('Generating ' + count + ' documents...', 'info');
+        const { data } = await api('POST', '/api/v1/test/generate/documents?count=' + count);
+        document.getElementById('generate-result').innerHTML = jsonHtml(data);
+        toast('✅ Generated ' + (data.documentsCount || count) + ' documents!', 'success');
+    }
+
+    async function generateAuthors(count) {
+        toast('Generating ' + count + ' authors...', 'info');
+        const { data } = await api('POST', '/api/v1/test/generate/authors?count=' + count);
+        document.getElementById('generate-result').innerHTML = jsonHtml(data);
+        toast('✅ Generated ' + (data.count || count) + ' authors!', 'success');
+    }
+
+    // ==================== Push Document Event ====================
+    function fillSampleDoc() {
+        const id = 'doc-' + Math.random().toString(36).substr(2, 8);
+        document.getElementById('doc-id').value = id;
+        document.getElementById('doc-title').value = 'Hướng dẫn sử dụng Elasticsearch với Spring Boot';
+        document.getElementById('doc-desc').value = 'Bài viết hướng dẫn chi tiết cách tích hợp Elasticsearch vào Spring Boot application';
+        document.getElementById('doc-content').value = 'Elasticsearch là một search engine mã nguồn mở, phân tán, được xây dựng trên Apache Lucene. Trong bài viết này, chúng ta sẽ tìm hiểu cách sử dụng Spring Data Elasticsearch để tích hợp vào ứng dụng Spring Boot.';
+        document.getElementById('doc-tags').value = 'elasticsearch, spring, java';
+        document.getElementById('doc-authorId').value = 'author-' + Math.random().toString(36).substr(2, 8);
+        document.getElementById('doc-authorName').value = 'Nguyễn Văn A';
+    }
+
+    async function pushDocEvent() {
+        const eventType = document.getElementById('doc-eventType').value;
+        const id = document.getElementById('doc-id').value || 'doc-' + Date.now();
+        const body = {
+            eventType,
+            id,
+            title: document.getElementById('doc-title').value,
+            description: document.getElementById('doc-desc').value,
+            content: document.getElementById('doc-content').value,
+            tags: document.getElementById('doc-tags').value.split(',').map(s => s.trim()).filter(Boolean),
+            categories: ['General'],
+            language: document.getElementById('doc-language').value,
+            status: document.getElementById('doc-status').value,
+            visibility: 'PUBLIC',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            publishedAt: new Date().toISOString(),
+            viewCount: Math.floor(Math.random() * 5000),
+            likeCount: Math.floor(Math.random() * 500),
+            commentCount: Math.floor(Math.random() * 100),
+            score: +(Math.random() * 2 + 3).toFixed(1),
+            author: {
+                id: document.getElementById('doc-authorId').value || 'author-001',
+                username: (document.getElementById('doc-authorName').value || 'unknown').toLowerCase().replace(/\s+/g, '_'),
+                displayName: document.getElementById('doc-authorName').value || 'Unknown',
+                email: 'user@example.com',
+                avatarUrl: 'https://i.pravatar.cc/150',
+                role: 'AUTHOR'
+            }
+        };
+        try {
+            const { data } = await api('POST', '/api/v1/test/kafka/document', body);
+            document.getElementById('push-doc-result').innerHTML = jsonHtml(data);
+            toast('✅ Document event pushed!', 'success');
+        } catch (e) {
+            toast('❌ Error: ' + e.message, 'error');
+        }
+    }
+
+    // ==================== Push Author Event ====================
+    function fillSampleAuthor() {
+        const id = 'author-' + Math.random().toString(36).substr(2, 8);
+        document.getElementById('author-id').value = id;
+        document.getElementById('author-username').value = 'nguyen_van_b';
+        document.getElementById('author-displayName').value = 'Nguyễn Văn B';
+        document.getElementById('author-email').value = 'nguyenvanb@example.com';
+        document.getElementById('author-phone').value = '0987654321';
+        document.getElementById('author-bio').value = 'Fullstack developer with 5 years of experience in Java and Kotlin';
+    }
+
+    async function pushAuthorEvent() {
+        const eventType = document.getElementById('author-eventType').value;
+        const id = document.getElementById('author-id').value || 'author-' + Date.now();
+        const body = {
+            eventType,
+            id,
+            username: document.getElementById('author-username').value,
+            displayName: document.getElementById('author-displayName').value,
+            email: document.getElementById('author-email').value,
+            phoneNumber: document.getElementById('author-phone').value,
+            avatarUrl: 'https://i.pravatar.cc/150?u=' + id,
+            bio: document.getElementById('author-bio').value,
+            role: document.getElementById('author-role').value,
+            status: document.getElementById('author-status').value,
+            createdAt: new Date().toISOString(),
+            documentCount: Math.floor(Math.random() * 50),
+            followerCount: Math.floor(Math.random() * 1000)
+        };
+        try {
+            const { data } = await api('POST', '/api/v1/test/kafka/author', body);
+            document.getElementById('push-author-result').innerHTML = jsonHtml(data);
+            toast('✅ Author event pushed!', 'success');
+        } catch (e) {
+            toast('❌ Error: ' + e.message, 'error');
+        }
+    }
+
+    // ==================== Search Documents ====================
+    async function searchDocs() {
+        const params = new URLSearchParams();
+        const kw = document.getElementById('sdoc-keyword').value;
+        if (kw) params.set('keyword', kw);
+        params.set('page', document.getElementById('sdoc-page').value);
+        params.set('size', document.getElementById('sdoc-size').value);
+        params.set('sortBy', document.getElementById('sdoc-sortBy').value);
+        params.set('order', document.getElementById('sdoc-order').value);
+        const st = document.getElementById('sdoc-status').value;
+        if (st) params.set('status', st);
+        const ai = document.getElementById('sdoc-authorId').value;
+        if (ai) params.set('authorId', ai);
+
+        const container = document.getElementById('search-doc-result');
+        container.innerHTML = '<div class="loading"></div>';
+        try {
+            const { data } = await api('GET', '/api/v1/search/documents?' + params.toString());
+            let html = '<div class="result-meta">';
+            html += '<span>Total: ' + data.totalElements + '</span>';
+            html += '<span>Page: ' + data.page + '/' + data.totalPages + '</span>';
+            html += '<span>Size: ' + data.size + '</span>';
+            html += '<span>HasNext: ' + data.hasNext + '</span>';
+            html += '</div>';
+
+            if (data.content && data.content.length > 0) {
+                data.content.forEach(doc => {
+                    const title = (doc.highlights && doc.highlights.title) ? doc.highlights.title[0] : (doc.title || 'No title');
+                    const desc = (doc.highlights && doc.highlights.description) ? doc.highlights.description[0] : (doc.description || '');
+                    html += '<div class="result-item">';
+                    html += '<h3>' + title + '</h3>';
+                    html += '<p>' + desc + '</p>';
+                    if (doc.author) html += '<p style="color:#93c5fd;font-size:12px;">👤 ' + (doc.author.displayName || doc.author.username || 'N/A') + '</p>';
+                    if (doc.tags && doc.tags.length) {
+                        html += '<div class="tags">' + doc.tags.map(t => '<span class="tag">' + t + '</span>').join('') + '</div>';
+                    }
+                    html += '<div class="stats">';
+                    html += '<span>👁 ' + (doc.viewCount || 0) + '</span>';
+                    html += '<span>❤️ ' + (doc.likeCount || 0) + '</span>';
+                    html += '<span>💬 ' + (doc.commentCount || 0) + '</span>';
+                    html += '<span>📊 ' + (doc.status || '-') + '</span>';
+                    html += '<span>🆔 ' + (doc.id || '-') + '</span>';
+                    html += '</div></div>';
+                });
+            } else {
+                html += '<p style="color:#64748b;padding:20px;text-align:center;">Không tìm thấy kết quả</p>';
+            }
+
+            html += '<details style="margin-top:12px;"><summary style="cursor:pointer;color:#64748b;font-size:12px;">📋 Raw JSON</summary>' + jsonHtml(data) + '</details>';
+            container.innerHTML = html;
+        } catch (e) {
+            container.innerHTML = '<p style="color:#f87171;">Error: ' + e.message + '</p>';
+        }
+    }
+
+    // ==================== Search Authors ====================
+    async function searchAuthors() {
+        const params = new URLSearchParams();
+        const kw = document.getElementById('sauth-keyword').value;
+        if (kw) params.set('keyword', kw);
+        params.set('page', document.getElementById('sauth-page').value);
+        params.set('size', document.getElementById('sauth-size').value);
+        const role = document.getElementById('sauth-role').value;
+        if (role) params.set('role', role);
+        const st = document.getElementById('sauth-status').value;
+        if (st) params.set('status', st);
+
+        const container = document.getElementById('search-author-result');
+        container.innerHTML = '<div class="loading"></div>';
+        try {
+            const { data } = await api('GET', '/api/v1/search/authors?' + params.toString());
+            let html = '<div class="result-meta">';
+            html += '<span>Total: ' + data.totalElements + '</span>';
+            html += '<span>Page: ' + data.page + '/' + data.totalPages + '</span>';
+            html += '</div>';
+
+            if (data.content && data.content.length > 0) {
+                data.content.forEach(a => {
+                    const name = (a.highlights && a.highlights.displayName) ? a.highlights.displayName[0] : (a.displayName || 'N/A');
+                    html += '<div class="result-item">';
+                    html += '<h3>👤 ' + name + '</h3>';
+                    html += '<p>@' + (a.username || '-') + ' • ' + (a.email || '-') + '</p>';
+                    if (a.bio) html += '<p style="font-style:italic;">' + a.bio + '</p>';
+                    html += '<div class="stats">';
+                    html += '<span>📝 ' + (a.documentCount || 0) + ' docs</span>';
+                    html += '<span>👥 ' + (a.followerCount || 0) + ' followers</span>';
+                    html += '<span>🎭 ' + (a.role || '-') + '</span>';
+                    html += '<span>📊 ' + (a.status || '-') + '</span>';
+                    html += '<span>🆔 ' + (a.id || '-') + '</span>';
+                    html += '</div></div>';
+                });
+            } else {
+                html += '<p style="color:#64748b;padding:20px;text-align:center;">Không tìm thấy kết quả</p>';
+            }
+
+            html += '<details style="margin-top:12px;"><summary style="cursor:pointer;color:#64748b;font-size:12px;">📋 Raw JSON</summary>' + jsonHtml(data) + '</details>';
+            container.innerHTML = html;
+        } catch (e) {
+            container.innerHTML = '<p style="color:#f87171;">Error: ' + e.message + '</p>';
+        }
+    }
+
+    // ==================== Suggest ====================
+    async function doSuggest() {
+        const q = document.getElementById('suggest-q').value;
+        if (!q) return;
+        const size = document.getElementById('suggest-size').value;
+        try {
+            const { data } = await api('GET', '/api/v1/search/documents/suggest?q=' + encodeURIComponent(q) + '&size=' + size);
+            let html = '';
+            if (data.suggestions && data.suggestions.length > 0) {
+                html = '<div style="margin-top:8px;">' + data.suggestions.map(s => '<div class="result-item"><p>💡 ' + s + '</p></div>').join('') + '</div>';
+            } else {
+                html = '<p style="color:#64748b;margin-top:8px;">Không có gợi ý</p>';
+            }
+            html += '<details style="margin-top:8px;"><summary style="cursor:pointer;color:#64748b;font-size:12px;">📋 Raw JSON</summary>' + jsonHtml(data) + '</details>';
+            document.getElementById('suggest-result').innerHTML = html;
+        } catch (e) {
+            document.getElementById('suggest-result').innerHTML = '<p style="color:#f87171;">Error: ' + e.message + '</p>';
+        }
+    }
+
+    // ==================== Trending ====================
+    async function getTrending() {
+        const size = document.getElementById('trending-size').value;
+        const container = document.getElementById('trending-result');
+        container.innerHTML = '<div class="loading"></div>';
+        try {
+            const { data } = await api('GET', '/api/v1/search/documents/trending?size=' + size);
+            let html = '';
+            if (data && data.length > 0) {
+                data.forEach((doc, i) => {
+                    html += '<div class="result-item"><h3>' + (i + 1) + '. 🔥 ' + (doc.title || 'No title') + '</h3>';
+                    html += '<div class="stats"><span>👁 ' + (doc.viewCount || 0) + '</span><span>❤️ ' + (doc.likeCount || 0) + '</span></div></div>';
+                });
+            } else {
+                html = '<p style="color:#64748b;">Chưa có dữ liệu trending</p>';
+            }
+            html += '<details style="margin-top:8px;"><summary style="cursor:pointer;color:#64748b;font-size:12px;">📋 Raw JSON</summary>' + jsonHtml(data) + '</details>';
+            container.innerHTML = html;
+        } catch (e) {
+            container.innerHTML = '<p style="color:#f87171;">Error: ' + e.message + '</p>';
+        }
+    }
+
+    // ==================== Popular ====================
+    async function getPopular() {
+        const size = document.getElementById('popular-size').value;
+        const container = document.getElementById('popular-result');
+        container.innerHTML = '<div class="loading"></div>';
+        try {
+            const { data } = await api('GET', '/api/v1/search/authors/popular?size=' + size);
+            let html = '';
+            if (data && data.length > 0) {
+                data.forEach((a, i) => {
+                    html += '<div class="result-item"><h3>' + (i + 1) + '. ⭐ ' + (a.displayName || a.username || 'N/A') + '</h3>';
+                    html += '<div class="stats"><span>👥 ' + (a.followerCount || 0) + ' followers</span><span>📝 ' + (a.documentCount || 0) + ' docs</span></div></div>';
+                });
+            } else {
+                html = '<p style="color:#64748b;">Chưa có dữ liệu popular</p>';
+            }
+            html += '<details style="margin-top:8px;"><summary style="cursor:pointer;color:#64748b;font-size:12px;">📋 Raw JSON</summary>' + jsonHtml(data) + '</details>';
+            container.innerHTML = html;
+        } catch (e) {
+            container.innerHTML = '<p style="color:#f87171;">Error: ' + e.message + '</p>';
+        }
+    }
+
+    // ==================== Reindex ====================
+    async function reindex(type) {
+        if (!confirm('⚠️ Bạn chắc chắn muốn reindex ' + type + '? Dữ liệu hiện tại sẽ bị xoá.')) return;
+        toast('Reindexing ' + type + '...', 'info');
+        try {
+            const { data } = await api('POST', '/api/v1/admin/reindex/' + type);
+            document.getElementById('admin-result').innerHTML = jsonHtml(data);
+            toast('✅ Reindex ' + type + ' thành công!', 'success');
+        } catch (e) {
+            toast('❌ Error: ' + e.message, 'error');
+        }
+    }
+
+    // ==================== Health ====================
+    async function checkHealth() {
+        const container = document.getElementById('health-result');
+        container.innerHTML = '<div class="loading"></div>';
+        try {
+            const res = await fetch(BASE + '/actuator/health');
+            const data = await res.json();
+            const badge = document.getElementById('health-badge');
+
+            if (data.status === 'UP') {
+                badge.textContent = '● UP';
+                badge.style.background = '#22c55e';
+            } else {
+                badge.textContent = '● DOWN';
+                badge.style.background = '#ef4444';
+            }
+
+            let html = '<div class="status-bar">';
+            html += '<div class="status-dot ' + (data.status === 'UP' ? 'green' : 'red') + '"></div>';
+            html += '<strong>Overall: ' + data.status + '</strong>';
+            html += '</div>';
+
+            if (data.components) {
+                Object.keys(data.components).forEach(name => {
+                    const c = data.components[name];
+                    html += '<div class="result-item">';
+                    html += '<h3><span class="status-dot ' + (c.status === 'UP' ? 'green' : 'red') + '" style="display:inline-block;vertical-align:middle;margin-right:6px;"></span>' + name + ': ' + c.status + '</h3>';
+                    if (c.details) {
+                        html += '<div style="font-size:12px;color:#94a3b8;margin-top:4px;">';
+                        Object.keys(c.details).forEach(k => {
+                            html += '<span style="margin-right:12px;"><strong>' + k + ':</strong> ' + c.details[k] + '</span>';
+                        });
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                });
+            }
+
+            html += '<details style="margin-top:12px;"><summary style="cursor:pointer;color:#64748b;font-size:12px;">📋 Raw JSON</summary>' + jsonHtml(data) + '</details>';
+            container.innerHTML = html;
+        } catch (e) {
+            document.getElementById('health-badge').textContent = '● ERROR';
+            document.getElementById('health-badge').style.background = '#ef4444';
+            container.innerHTML = '<p style="color:#f87171;">Cannot reach actuator: ' + e.message + '</p>';
+        }
+    }
+
+    // ==================== Init ====================
+    checkHealth();
+    setInterval(checkHealth, 30000);
+</script>
+</body>
+</html>
+
