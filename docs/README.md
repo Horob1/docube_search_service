@@ -1,6 +1,7 @@
 # 📚 Search Service — Documentation
 
 > Thư mục này chứa tất cả tài liệu của Search Service.
+> Cập nhật tài liệu: 22/03/2026 (v1.1 - school/faculty search + filter)
 
 ---
 
@@ -43,4 +44,3 @@ docker compose up -d
 - **Port:** 9111
 - **Eureka:** http://localhost:9000
 - **Health:** http://localhost:9111/actuator/health
-

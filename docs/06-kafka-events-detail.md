@@ -1,6 +1,6 @@
 # 📨 Search Service — Kafka Events & Topic Models chi tiết
 
-> **Cập nhật:** 28/02/2026  
+> **Cập nhật:** 22/03/2026  
 > **Kafka Bootstrap:** `localhost:7092`  
 > **Security:** SASL_PLAINTEXT (username: `horob1`, password: `2410`)  
 > **Consumer Group:** `search-service-group`
@@ -73,6 +73,10 @@
   "title": "Tiêu đề bài viết",
   "description": "Mô tả ngắn gọn về bài viết",
   "content": "Nội dung đầy đủ của bài viết. Có thể dài nhiều paragraph...",
+  "schoolId": "HCMUS",
+  "schoolName": "Truong Dai hoc Khoa hoc Tu nhien",
+  "facultyId": "CNTT",
+  "facultyName": "Cong nghe thong tin",
   "tags": ["spring", "java", "backend"],
   "categories": ["Backend", "Tutorial"],
   "language": "vi",
@@ -104,22 +108,26 @@
 |---|-------|------|----------|-----------------|--------|
 | 1 | `eventType` | String | ✅ **BẮT BUỘC** | `DOCUMENT_CREATED` \| `DOCUMENT_UPDATED` \| `DOCUMENT_DELETED` | Loại sự kiện |
 | 2 | `id` | String | ✅ **BẮT BUỘC** | Bất kỳ string unique | ID duy nhất của document. Dùng làm `_id` trong Elasticsearch |
-| 3 | `title` | String | ⚠️ *Required cho CREATE/UPDATE* | Bất kỳ | Tiêu đề bài viết. Được search với **boost ×3**. Được sử dụng cho autocomplete suggest |
-| 4 | `description` | String | ❌ | Bất kỳ | Mô tả ngắn. Được search với **boost ×2** |
-| 5 | `content` | String | ❌ | Bất kỳ | Nội dung đầy đủ. Được full-text search. Có thể dài |
-| 6 | `tags` | List\<String\> | ❌ | Array of strings | Danh sách tags. Lưu dạng keyword (exact match filter) |
-| 7 | `categories` | List\<String\> | ❌ | Array of strings | Danh sách categories. Lưu dạng keyword |
-| 8 | `language` | String | ❌ | `vi`, `en`, `ja`, ... | Mã ngôn ngữ ISO 639-1 |
-| 9 | `status` | String | ❌ | `PUBLISHED` \| `DRAFT` \| `ARCHIVED` | Trạng thái bài viết. Dùng để filter trong search. Trending chỉ lấy `PUBLISHED` |
-| 10 | `visibility` | String | ❌ | `PUBLIC` \| `PRIVATE` \| `UNLISTED` | Quyền hiển thị |
-| 11 | `createdAt` | String | ❌ | ISO 8601 hoặc epoch millis | Ngày tạo. Dùng để sort (`sortBy=createdAt`) |
-| 12 | `updatedAt` | String | ❌ | ISO 8601 hoặc epoch millis | Ngày cập nhật |
-| 13 | `publishedAt` | String | ❌ | ISO 8601 hoặc epoch millis | Ngày xuất bản |
-| 14 | `viewCount` | Long | ❌ | `>= 0` | Lượt xem. Dùng để sort (`sortBy=viewCount`) và Trending |
-| 15 | `likeCount` | Long | ❌ | `>= 0` | Lượt thích |
-| 16 | `commentCount` | Long | ❌ | `>= 0` | Số comment |
-| 17 | `score` | Float | ❌ | `0.0 – 5.0` | Điểm đánh giá trung bình |
-| 18 | `author` | Object | ⚠️ *Required cho CREATE/UPDATE* | Xem bảng bên dưới | Thông tin tác giả (denormalized, embedded) |
+| 3 | `title` | String | ⚠️ *Required cho CREATE/UPDATE* | Bất kỳ | Tiêu đề bài viết. Được search với **boost x6**. Được dùng cho suggest |
+| 4 | `description` | String | ❌ | Bất kỳ | Mô tả ngắn |
+| 5 | `content` | String | ❌ | Bất kỳ | Nội dung đầy đủ. Được search với **boost x1** |
+| 6 | `schoolId` | String | ❌ | Bất kỳ | Mã trường. Map vào field `school_id` (keyword filter) |
+| 7 | `schoolName` | String | ❌ | Bất kỳ | Tên trường. Map vào field `school_name` (text + keyword, boost x3) |
+| 8 | `facultyId` | String | ❌ | Bất kỳ | Mã khoa. Map vào field `faculty_id` (keyword filter) |
+| 9 | `facultyName` | String | ❌ | Bất kỳ | Tên khoa. Map vào field `faculty_name` (text + keyword, boost x3) |
+| 10 | `tags` | List<String> | ❌ | Array of strings | Danh sách tags. Lưu dạng keyword |
+| 11 | `categories` | List<String> | ❌ | Array of strings | Danh sách categories. Lưu dạng keyword |
+| 12 | `language` | String | ❌ | `vi`, `en`, `ja`, ... | Mã ngôn ngữ ISO 639-1 |
+| 13 | `status` | String | ❌ | `PUBLISHED` \| `DRAFT` \| `ARCHIVED` | Trạng thái bài viết. Dùng filter |
+| 14 | `visibility` | String | ❌ | `PUBLIC` \| `PRIVATE` \| `UNLISTED` | Quyền hiển thị |
+| 15 | `createdAt` | String | ❌ | ISO 8601 hoặc epoch millis | Ngày tạo. Dùng để sort |
+| 16 | `updatedAt` | String | ❌ | ISO 8601 hoặc epoch millis | Ngày cập nhật |
+| 17 | `publishedAt` | String | ❌ | ISO 8601 hoặc epoch millis | Ngày xuất bản |
+| 18 | `viewCount` | Long | ❌ | `>= 0` | Lượt xem |
+| 19 | `likeCount` | Long | ❌ | `>= 0` | Lượt thích |
+| 20 | `commentCount` | Long | ❌ | `>= 0` | Số comment |
+| 21 | `score` | Float | ❌ | `0.0 - 5.0` | Điểm đánh giá trung bình |
+| 22 | `author` | Object | ⚠️ *Required cho CREATE/UPDATE* | Xem bảng bên dưới | Thông tin tác giả (embedded) |
 
 #### Object `author` (embedded trong DocumentEvent)
 
@@ -141,24 +149,28 @@ Bắn khi: **Tạo mới document**
 ```json
 {
   "eventType": "DOCUMENT_CREATED",
-  "id": "doc-abc12345",                     // ✅ BẮT BUỘC
-  "title": "Tiêu đề bài viết",              // ⚠️ NÊN CÓ (dùng cho search + suggest)
-  "description": "Mô tả ngắn",              // ⚠️ NÊN CÓ (dùng cho search)
-  "content": "Nội dung đầy đủ...",           // ⚠️ NÊN CÓ (dùng cho search)
-  "tags": ["spring", "java"],                // ❌ optional
-  "categories": ["Backend"],                 // ❌ optional
-  "language": "vi",                          // ❌ optional
-  "status": "PUBLISHED",                     // ⚠️ NÊN CÓ (filter + trending)
-  "visibility": "PUBLIC",                    // ❌ optional
-  "createdAt": "2026-02-28T10:00:00Z",       // ⚠️ NÊN CÓ (sort)
-  "updatedAt": "2026-02-28T10:00:00Z",       // ❌ optional
-  "publishedAt": "2026-02-28T10:00:00Z",     // ❌ optional
-  "viewCount": 0,                            // ❌ optional (default 0)
-  "likeCount": 0,                            // ❌ optional
-  "commentCount": 0,                         // ❌ optional
-  "score": 0.0,                              // ❌ optional
-  "author": {                                // ⚠️ NÊN CÓ (search by author)
-    "id": "author-xyz789",                   // ✅ BẮT BUỘC nếu có author
+  "id": "doc-abc12345",
+  "title": "Tiêu đề bài viết",
+  "description": "Mô tả ngắn",
+  "content": "Nội dung đầy đủ...",
+  "schoolId": "HCMUS",
+  "schoolName": "Truong Dai hoc Khoa hoc Tu nhien",
+  "facultyId": "CNTT",
+  "facultyName": "Cong nghe thong tin",
+  "tags": ["spring", "java"],
+  "categories": ["Backend"],
+  "language": "vi",
+  "status": "PUBLISHED",
+  "visibility": "PUBLIC",
+  "createdAt": "2026-02-28T10:00:00Z",
+  "updatedAt": "2026-02-28T10:00:00Z",
+  "publishedAt": "2026-02-28T10:00:00Z",
+  "viewCount": 0,
+  "likeCount": 0,
+  "commentCount": 0,
+  "score": 0.0,
+  "author": {
+    "id": "author-xyz789",
     "username": "john_doe",
     "displayName": "John Doe",
     "email": "john@example.com",
@@ -174,15 +186,19 @@ Bắn khi: **Tạo mới document**
 
 #### `DOCUMENT_UPDATED`
 
-Bắn khi: **Cập nhật document** (thay đổi title, content, status, viewCount, v.v.)
+Bắn khi: **Cập nhật document**
 
 ```json
 {
   "eventType": "DOCUMENT_UPDATED",
-  "id": "doc-abc12345",                     // ✅ BẮT BUỘC — phải trùng ID cũ
-  "title": "Tiêu đề đã sửa",               // Gửi ĐẦY ĐỦ tất cả fields
-  "description": "Mô tả đã sửa",           // (không chỉ fields thay đổi)
+  "id": "doc-abc12345",
+  "title": "Tiêu đề đã sửa",
+  "description": "Mô tả đã sửa",
   "content": "Nội dung đã sửa...",
+  "schoolId": "HCMUS",
+  "schoolName": "Truong Dai hoc Khoa hoc Tu nhien",
+  "facultyId": "CNTT",
+  "facultyName": "Cong nghe thong tin",
   "tags": ["spring", "java", "updated"],
   "categories": ["Backend"],
   "language": "vi",
@@ -462,6 +478,10 @@ data class DocumentEvent(
     val title: String? = null,
     val description: String? = null,
     val content: String? = null,
+    val schoolId: String? = null,
+    val schoolName: String? = null,
+    val facultyId: String? = null,
+    val facultyName: String? = null,
     val tags: List<String>? = null,
     val categories: List<String>? = null,
     val language: String? = null,
@@ -514,6 +534,10 @@ class DocumentEventPublisher(
             title = document.title,
             description = document.description,
             content = document.content,
+            schoolId = document.schoolId,
+            schoolName = document.schoolName,
+            facultyId = document.facultyId,
+            facultyName = document.facultyName,
             tags = document.tags,
             categories = document.categories,
             language = document.language,
@@ -601,6 +625,10 @@ event.setId(document.getId());
 event.setTitle(document.getTitle());
 event.setDescription(document.getDescription());
 event.setContent(document.getContent());
+event.setSchoolId(document.getSchoolId());
+event.setSchoolName(document.getSchoolName());
+event.setFacultyId(document.getFacultyId());
+event.setFacultyName(document.getFacultyName());
 event.setTags(document.getTags());
 event.setCategories(document.getCategories());
 event.setLanguage(document.getLanguage());

@@ -21,6 +21,24 @@ data class DocumentIndex(
     @Field(type = FieldType.Text)
     val content: String? = null,
 
+    @Field(name = "school_id", type = FieldType.Keyword)
+    val schoolId: String? = null,
+
+    @MultiField(
+        mainField = Field(name = "school_name", type = FieldType.Text, analyzer = "standard"),
+        otherFields = [InnerField(suffix = "keyword", type = FieldType.Keyword)]
+    )
+    val schoolName: String? = null,
+
+    @Field(name = "faculty_id", type = FieldType.Keyword)
+    val facultyId: String? = null,
+
+    @MultiField(
+        mainField = Field(name = "faculty_name", type = FieldType.Text, analyzer = "standard"),
+        otherFields = [InnerField(suffix = "keyword", type = FieldType.Keyword)]
+    )
+    val facultyName: String? = null,
+
     @Field(type = FieldType.Keyword)
     val tags: List<String>? = null,
 

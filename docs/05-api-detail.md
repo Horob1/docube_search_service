@@ -2,7 +2,7 @@
 
 > **Base URL:** `http://localhost:9111`  
 > **Content-Type:** `application/json`  
-> **Cập nhật:** 28/02/2026
+> **Cập nhật:** 22/03/2026
 
 ---
 
@@ -42,27 +42,29 @@ GET /api/v1/search/documents
 | `order` | String | ❌ | `desc` | `asc` \| `desc` | Hướng sắp xếp |
 | `status` | String | ❌ | `null` | `PUBLISHED` \| `DRAFT` \| `ARCHIVED` | Lọc theo status |
 | `authorId` | String | ❌ | `null` | — | Lọc theo author ID |
+| `school_id` | String | ❌ | `null` | — | Lọc chính xác theo school ID (`term`) |
+| `faculty_id` | String | ❌ | `null` | — | Lọc chính xác theo faculty ID (`term`) |
 
 ### Search Logic
 
 - **MultiMatch** trên các trường (có boost):
-  - `title` — boost ×3
-  - `description` — boost ×2
-  - `content` — boost ×1
-  - `author.displayName` — boost ×2
-  - `author.username` — boost ×1
+  - `title` - boost x6 (cao nhất)
+  - `school_name` - boost x3
+  - `faculty_name` - boost x3
+  - `content` - boost x1
 - **Type:** `BEST_FIELDS`
-- **Fuzziness:** `AUTO` (tự sửa lỗi chính tả)
-- **Highlight:** `title`, `description`, `content` (tag: `<em>...</em>`, fragment: 150 chars, max 3 fragments)
+- **Fuzziness:** `AUTO`
+- **Filter:** `term` cho `status`, `author.id`, `school_id`, `faculty_id` (nếu được truyền)
+- **Highlight:** `title`, `content`, `school_name`, `faculty_name` (tag: `<em>...</em>`, fragment: 150 chars, max 3 fragments)
 
 ### Ví dụ Request
 
 ```http
-GET /api/v1/search/documents?keyword=Spring+Boot&page=0&size=10&sortBy=relevance&order=desc&status=PUBLISHED
+GET /api/v1/search/documents?keyword=Cong+nghe+thong+tin&page=0&size=10&sortBy=relevance&order=desc&school_id=HCMUS&faculty_id=CNTT
 ```
 
 ```powershell
-curl "http://localhost:9111/api/v1/search/documents?keyword=Spring+Boot&page=0&size=10&sortBy=relevance&status=PUBLISHED"
+curl "http://localhost:9111/api/v1/search/documents?keyword=Cong+nghe+thong+tin&page=0&size=10&sortBy=relevance&school_id=HCMUS&faculty_id=CNTT"
 ```
 
 ### Response `200 OK`
@@ -72,17 +74,21 @@ curl "http://localhost:9111/api/v1/search/documents?keyword=Spring+Boot&page=0&s
   "content": [
     {
       "id": "doc-abc12345",
-      "title": "Hướng dẫn Spring Boot từ A đến Z",
-      "description": "Tổng hợp kiến thức Spring Boot cho người mới bắt đầu",
-      "content": "Spring Boot là framework phổ biến nhất trong hệ sinh thái Java...",
-      "tags": ["spring", "java", "backend"],
-      "categories": ["Backend"],
+      "title": "Gioi thieu nganh Cong nghe thong tin",
+      "description": "Tong hop tai lieu cho tan sinh vien CNTT",
+      "content": "Cong nghe thong tin la mot nganh trong diem...",
+      "schoolId": "HCMUS",
+      "schoolName": "Truong Dai hoc Khoa hoc Tu nhien",
+      "facultyId": "CNTT",
+      "facultyName": "Cong nghe thong tin",
+      "tags": ["cntt", "huong-nghiep"],
+      "categories": ["Hoc tap"],
       "language": "vi",
       "status": "PUBLISHED",
       "visibility": "PUBLIC",
-      "createdAt": "2026-02-28T10:00:00Z",
-      "updatedAt": "2026-02-28T10:30:00Z",
-      "publishedAt": "2026-02-28T10:00:00Z",
+      "createdAt": "2026-03-22T10:00:00Z",
+      "updatedAt": "2026-03-22T10:30:00Z",
+      "publishedAt": "2026-03-22T10:00:00Z",
       "viewCount": 2345,
       "likeCount": 89,
       "commentCount": 12,
@@ -96,9 +102,10 @@ curl "http://localhost:9111/api/v1/search/documents?keyword=Spring+Boot&page=0&s
         "role": "AUTHOR"
       },
       "highlights": {
-        "title": ["Hướng dẫn <em>Spring</em> <em>Boot</em> từ A đến Z"],
-        "description": ["Tổng hợp kiến thức <em>Spring</em> <em>Boot</em> cho người mới"],
-        "content": ["<em>Spring</em> <em>Boot</em> là framework phổ biến nhất..."]
+        "title": ["Gioi thieu nganh <em>Cong nghe thong tin</em>"],
+        "school_name": ["Truong Dai hoc Khoa hoc Tu nhien"],
+        "faculty_name": ["<em>Cong nghe thong tin</em>"],
+        "content": ["... nganh <em>cong nghe thong tin</em> co nhu cau cao ..."]
       }
     }
   ],
@@ -110,16 +117,20 @@ curl "http://localhost:9111/api/v1/search/documents?keyword=Spring+Boot&page=0&s
 }
 ```
 
-### Response Fields — `content[]` (DocumentSearchResponse)
+### Response Fields - `content[]` (DocumentSearchResponse)
 
 | Field | Type | Nullable | Mô tả |
-|-------|------|----------|--------|
+|-------|------|----------|-------|
 | `id` | String | ❌ | ID duy nhất của document |
 | `title` | String | ✅ | Tiêu đề |
 | `description` | String | ✅ | Mô tả ngắn |
 | `content` | String | ✅ | Nội dung đầy đủ |
-| `tags` | List\<String\> | ✅ | Danh sách tags |
-| `categories` | List\<String\> | ✅ | Danh sách categories |
+| `schoolId` | String | ✅ | ID trường |
+| `schoolName` | String | ✅ | Tên trường |
+| `facultyId` | String | ✅ | ID khoa |
+| `facultyName` | String | ✅ | Tên khoa |
+| `tags` | List<String> | ✅ | Danh sách tags |
+| `categories` | List<String> | ✅ | Danh sách categories |
 | `language` | String | ✅ | Mã ngôn ngữ (`vi`, `en`, ...) |
 | `status` | String | ✅ | `PUBLISHED` \| `DRAFT` \| `ARCHIVED` |
 | `visibility` | String | ✅ | `PUBLIC` \| `PRIVATE` \| `UNLISTED` |
@@ -131,13 +142,7 @@ curl "http://localhost:9111/api/v1/search/documents?keyword=Spring+Boot&page=0&s
 | `commentCount` | Long | ✅ | Số comment |
 | `score` | Float | ✅ | Điểm đánh giá |
 | `author` | Object | ✅ | Thông tin tác giả (embedded) |
-| `author.id` | String | ✅ | Author ID |
-| `author.username` | String | ✅ | Username |
-| `author.displayName` | String | ✅ | Tên hiển thị |
-| `author.email` | String | ✅ | Email |
-| `author.avatarUrl` | String | ✅ | URL avatar |
-| `author.role` | String | ✅ | Role |
-| `highlights` | Map\<String, List\<String\>\> | ✅ | Highlight HTML fragments (key = field name) |
+| `highlights` | Map<String, List<String>> | ✅ | Highlight HTML fragments |
 
 ### Response Fields — Pagination Wrapper
 
@@ -154,7 +159,7 @@ curl "http://localhost:9111/api/v1/search/documents?keyword=Spring+Boot&page=0&s
 
 ```json
 {
-  "timestamp": "2026-02-28T10:00:00Z",
+  "timestamp": "2026-03-22T10:00:00Z",
   "status": 400,
   "error": "Validation Error",
   "message": "size: must be less than or equal to 100",
@@ -466,6 +471,68 @@ POST /api/v1/admin/reindex/documents
   "message": "Document index recreated. Data will be repopulated via Kafka events."
 }
 ```
+
+### Runbook Migration/Reindex (Alias Swap + Rollback)
+
+Để tránh downtime khi thay đổi mapping (ví dụ thêm `school_id`, `school_name`, `faculty_id`, `faculty_name`), nên dùng chiến lược index version hóa + alias.
+
+#### Bước 1: Tạo index mới
+
+```http
+PUT /documents_v2
+{
+  "settings": { "number_of_shards": 1, "number_of_replicas": 1 },
+  "mappings": {
+    "properties": {
+      "school_id": { "type": "keyword" },
+      "school_name": { "type": "text", "fields": { "keyword": { "type": "keyword" } } },
+      "faculty_id": { "type": "keyword" },
+      "faculty_name": { "type": "text", "fields": { "keyword": { "type": "keyword" } } }
+    }
+  }
+}
+```
+
+#### Bước 2: Reindex dữ liệu
+
+```http
+POST /_reindex
+{
+  "source": { "index": "documents_v1" },
+  "dest": { "index": "documents_v2" }
+}
+```
+
+#### Bước 3: Kiểm tra trước cutover
+
+- So sánh `_count` giữa `documents_v1` và `documents_v2`.
+- Chạy thử các truy vấn chính: keyword search, filter `school_id`, filter `faculty_id`, highlight.
+
+#### Bước 4: Alias swap atomically
+
+```http
+POST /_aliases
+{
+  "actions": [
+    { "remove": { "index": "documents_v1", "alias": "documents" } },
+    { "add": { "index": "documents_v2", "alias": "documents" } }
+  ]
+}
+```
+
+#### Bước 5: Rollback (nếu cần)
+
+```http
+POST /_aliases
+{
+  "actions": [
+    { "remove": { "index": "documents_v2", "alias": "documents" } },
+    { "add": { "index": "documents_v1", "alias": "documents" } }
+  ]
+}
+```
+
+Khuyến nghị giữ index cũ ít nhất 24-48 giờ trước khi xóa hẳn.
 
 ---
 

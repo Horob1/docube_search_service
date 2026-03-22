@@ -110,6 +110,32 @@ class TestController(
 
         val categories = listOf("Backend", "Search", "Messaging", "DevOps", "Architecture",
             "Database", "API", "Architecture", "DevOps", "Monitoring")
+        val schoolIds = listOf("HCMUS", "HCMUT", "UEH", "HCMUS", "HCMUS", "HCMUT", "UEH", "HCMUS", "HCMUT", "UEH")
+        val schoolNames = listOf(
+            "Truong Dai hoc Khoa hoc Tu nhien",
+            "Truong Dai hoc Bach Khoa",
+            "Truong Dai hoc Kinh te TP.HCM",
+            "Truong Dai hoc Khoa hoc Tu nhien",
+            "Truong Dai hoc Khoa hoc Tu nhien",
+            "Truong Dai hoc Bach Khoa",
+            "Truong Dai hoc Kinh te TP.HCM",
+            "Truong Dai hoc Khoa hoc Tu nhien",
+            "Truong Dai hoc Bach Khoa",
+            "Truong Dai hoc Kinh te TP.HCM"
+        )
+        val facultyIds = listOf("CNTT", "DTVT", "QTKD", "CNTT", "KHTN", "CKM", "TCNH", "CNTT", "CKM", "QTKD")
+        val facultyNames = listOf(
+            "Cong nghe thong tin",
+            "Dien tu vien thong",
+            "Quan tri kinh doanh",
+            "Cong nghe thong tin",
+            "Khoa hoc tu nhien",
+            "Co khi may",
+            "Tai chinh ngan hang",
+            "Cong nghe thong tin",
+            "Co khi may",
+            "Quan tri kinh doanh"
+        )
 
         val ids = mutableListOf<String>()
 
@@ -123,6 +149,10 @@ class TestController(
                 title = title,
                 description = desc,
                 content = content,
+                schoolId = schoolIds[i],
+                schoolName = schoolNames[i],
+                facultyId = facultyIds[i],
+                facultyName = facultyNames[i],
                 tags = tags[i],
                 categories = listOf(categories[i]),
                 language = "vi",
@@ -218,4 +248,3 @@ class TestController(
         return start + Math.random().toFloat() * (endInclusive - start)
     }
 }
-

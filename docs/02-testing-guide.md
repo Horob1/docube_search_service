@@ -3,7 +3,7 @@
 > **Service:** Search Service (SS_DEV1)  
 > **Port:** 9111  
 > **Test UI:** `http://localhost:9111` (chỉ khi profile = dev)  
-> **Cập nhật:** 28/02/2026
+> **Cập nhật:** 22/03/2026
 
 ---
 
@@ -95,11 +95,12 @@ Mở trình duyệt: **http://localhost:9111**
 
 | Bước | Hành động | Kết quả mong đợi |
 |------|-----------|-------------------|
-| 1 | Tab "Generate Data" → nhấn "Generate 5 Documents + 1 Author" | Response: `status: generated`, 5 document IDs |
-| 2 | Chờ 2-3 giây (Kafka consumer xử lý) | Log hiện: `✅ Indexed new document: doc-xxx` |
-| 3 | Tab "Search Documents" → keyword = "Spring" → nhấn Search | Kết quả: document "Hướng dẫn Spring Boot..." với highlight |
-| 4 | keyword = "" (trống) → Search | Trả về tất cả documents (match_all) |
-| 5 | Filter status = "DRAFT" | Kết quả: 0 (vì sample data đều PUBLISHED) |
+| 1 | Tab "Generate Data" -> nhấn "Generate 5 Documents + 1 Author" | Response: `status: generated`, 5 document IDs |
+| 2 | Chờ 2-3 giây (Kafka consumer xử lý) | Log hiện: `Indexed new document: doc-xxx` |
+| 3 | Tab "Search Documents" -> keyword = "Công nghệ thông tin" -> nhấn Search | Kết quả có tài liệu liên quan hoặc thuộc khoa CNTT |
+| 4 | Truyền `school_id=HCMUS` và `faculty_id=CNTT` | Chỉ trả về tài liệu đúng trường/khoa |
+| 5 | keyword = "" (trống) -> Search | Trả về tất cả documents (match_all) |
+| 6 | Filter status = "DRAFT" | Kết quả: 0 (vì sample data đều PUBLISHED) |
 
 ### Test Case 2: Search Authors
 
@@ -196,10 +197,13 @@ curl -X POST http://localhost:9111/api/v1/test/generate/authors?count=5
 curl "http://localhost:9111/api/v1/search/documents"
 
 # Search với keyword
-curl "http://localhost:9111/api/v1/search/documents?keyword=Spring+Boot&page=0&size=10"
+curl "http://localhost:9111/api/v1/search/documents?keyword=Cong+nghe+thong+tin&page=0&size=10"
 
-# Search + filter
+# Search + filter status
 curl "http://localhost:9111/api/v1/search/documents?keyword=Kafka&status=PUBLISHED&sortBy=viewCount&order=desc"
+
+# Search + school/faculty exact filter
+curl "http://localhost:9111/api/v1/search/documents?keyword=Cong+nghe+thong+tin&school_id=HCMUS&faculty_id=CNTT"
 ```
 
 ### Search Authors
@@ -260,25 +264,25 @@ curl http://localhost:9111/actuator/health | ConvertFrom-Json | ConvertTo-Json -
 
 ```
 # Consumer nhận event
-📩 Received document event: type=DOCUMENT_CREATED, id=doc-xxx, topic=document-events, partition=0, offset=42
+Received document event: type=DOCUMENT_CREATED, id=doc-xxx, topic=document-events, partition=0, offset=42
 
 # Index thành công
-✅ Indexed new document: doc-xxx
-✅ Indexed new author: author-xxx
+Indexed new document: doc-xxx
+Indexed new author: author-xxx
 
 # Author propagation
-🔄 Propagated author update to documents for author: author-xxx
+Propagated author update to documents for author: author-xxx
 Updated total 5 documents for author author-xxx
 
 # Delete
-🗑 Deleted document: doc-xxx
+Deleted document: doc-xxx
 
 # Kafka retry
-⚠️ Kafka retry attempt 1 for topic=document-events, key=doc-xxx, error=...
+Kafka retry attempt 1 for topic=document-events, key=doc-xxx, error=...
 
 # Index init
-✅ Created index 'documents' with mappings and settings
-✔ Index 'authors' already exists
+Created index 'documents' with mappings and settings
+Index 'authors' already exists
 ```
 
 ---
@@ -333,4 +337,3 @@ curl -u elastic:horob1@2410 http://localhost:9112/authors/_count
 # Xem mapping
 curl -u elastic:horob1@2410 http://localhost:9112/documents/_mapping?pretty
 ```
-

@@ -41,7 +41,7 @@ class DocumentSearchService(
             val pageable = PageRequest.of(request.page, request.size)
             val queryBuilder = NativeQuery.builder()
 
-            // Build query
+            // Full-text search across document and organization fields.
             if (!request.keyword.isNullOrBlank()) {
                 queryBuilder.withQuery { q ->
                     q.bool { b ->
@@ -49,11 +49,10 @@ class DocumentSearchService(
                             m.multiMatch { mm ->
                                 mm.query(request.keyword)
                                     .fields(
-                                        "title^3",
-                                        "description^2",
-                                        "content",
-                                        "author.displayName^2",
-                                        "author.username"
+                                        "title^6",
+                                        "school_name^3",
+                                        "faculty_name^3",
+                                        "content^1"
                                     )
                                     .type(TextQueryType.BestFields)
                                     .fuzziness("AUTO")
@@ -64,6 +63,12 @@ class DocumentSearchService(
                         }
                         if (!request.authorId.isNullOrBlank()) {
                             b.filter { f -> f.term { t -> t.field("author.id").value(request.authorId) } }
+                        }
+                        if (!request.schoolId.isNullOrBlank()) {
+                            b.filter { f -> f.term { t -> t.field("school_id").value(request.schoolId) } }
+                        }
+                        if (!request.facultyId.isNullOrBlank()) {
+                            b.filter { f -> f.term { t -> t.field("faculty_id").value(request.facultyId) } }
                         }
                         b
                     }
@@ -77,6 +82,12 @@ class DocumentSearchService(
                         }
                         if (!request.authorId.isNullOrBlank()) {
                             b.filter { f -> f.term { t -> t.field("author.id").value(request.authorId) } }
+                        }
+                        if (!request.schoolId.isNullOrBlank()) {
+                            b.filter { f -> f.term { t -> t.field("school_id").value(request.schoolId) } }
+                        }
+                        if (!request.facultyId.isNullOrBlank()) {
+                            b.filter { f -> f.term { t -> t.field("faculty_id").value(request.facultyId) } }
                         }
                         b
                     }
@@ -106,8 +117,9 @@ class DocumentSearchService(
                     .build(),
                 listOf(
                     HighlightField("title"),
-                    HighlightField("description"),
-                    HighlightField("content")
+                    HighlightField("content"),
+                    HighlightField("school_name"),
+                    HighlightField("faculty_name")
                 )
             )
 

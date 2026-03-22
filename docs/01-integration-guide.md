@@ -1,10 +1,10 @@
 # 📘 Search Service — Hướng dẫn tích hợp (Integration Guide)
 
 > **Service:** Search Service (SS_DEV1)  
-> **Version:** 1.0.0  
+> **Version:** 1.1.0  
 > **Port:** 9111  
 > **Base URL:** `http://localhost:9111`  
-> **Cập nhật:** 28/02/2026
+> **Cập nhật:** 22/03/2026
 
 ---
 
@@ -86,18 +86,21 @@ GET /api/v1/search/documents
 | `order` | String | ❌ | desc | `asc` \| `desc` |
 | `status` | String | ❌ | null | Filter: `PUBLISHED` \| `DRAFT` \| `ARCHIVED` |
 | `authorId` | String | ❌ | null | Filter theo author ID |
+| `school_id` | String | ❌ | null | Filter chính xác theo school ID |
+| `faculty_id` | String | ❌ | null | Filter chính xác theo faculty ID |
 
 **Ví dụ:**
 
 ```http
-GET /api/v1/search/documents?keyword=Spring+Boot&page=0&size=10&sortBy=relevance&status=PUBLISHED
+GET /api/v1/search/documents?keyword=Cong+nghe+thong+tin&page=0&size=10&sortBy=relevance&school_id=HCMUS&faculty_id=CNTT
 ```
 
 **Search logic:**
-- MultiMatch trên: `title^3`, `description^2`, `content`, `author.displayName^2`, `author.username`
-- Fuzzy search (tự động sửa lỗi chính tả)
-- Highlight trên: `title`, `description`, `content`
-- Nếu `keyword` = null → trả về `match_all` (tất cả documents)
+- MultiMatch trên: `title^6`, `school_name^3`, `faculty_name^3`, `content^1`
+- Fuzzy search (`AUTO`)
+- Filter term (nếu có): `status`, `author.id`, `school_id`, `faculty_id`
+- Highlight trên: `title`, `content`, `school_name`, `faculty_name`
+- Nếu `keyword` = null -> trả về `match_all` (tất cả documents)
 
 ---
 
@@ -195,6 +198,20 @@ Trả về trạng thái ES cluster, Redis, Kafka, Eureka.
 
 ---
 
+### 3.8. Migration/Reindex khuyến nghị (không downtime)
+
+Khi thay đổi mapping lớn (như thêm `school/faculty`), ưu tiên quy trình:
+
+1. Tạo index mới version hóa (`documents_v2`).
+2. Reindex dữ liệu từ index cũ.
+3. Verify kết quả search/filter.
+4. Alias swap atomically sang index mới.
+5. Giữ index cũ 24-48 giờ để rollback.
+
+> Chi tiết lệnh mẫu xem tại `docs/05-api-detail.md` (mục **Runbook Migration/Reindex**).
+
+---
+
 ## 4. Kafka Events — Đồng bộ dữ liệu
 
 ### 4.1. Document Events
@@ -218,6 +235,10 @@ Trả về trạng thái ES cluster, Redis, Kafka, Eureka.
   "title": "Tiêu đề bài viết",
   "description": "Mô tả ngắn",
   "content": "Nội dung đầy đủ của bài viết...",
+  "schoolId": "HCMUS",
+  "schoolName": "Trường Đại học Khoa học Tự nhiên",
+  "facultyId": "CNTT",
+  "facultyName": "Công nghệ thông tin",
   "tags": ["spring", "java", "backend"],
   "categories": ["Backend"],
   "language": "vi",
@@ -250,8 +271,12 @@ Trả về trạng thái ES cluster, Redis, Kafka, Eureka.
 | `title` | String | ❌* | Tiêu đề (required cho CREATE/UPDATE) |
 | `description` | String | ❌ | Mô tả ngắn |
 | `content` | String | ❌ | Nội dung đầy đủ |
-| `tags` | List\<String\> | ❌ | Tags |
-| `categories` | List\<String\> | ❌ | Danh mục |
+| `schoolId` | String | ❌ | Mã trường (sẽ map thành `school_id`) |
+| `schoolName` | String | ❌ | Tên trường (sẽ map thành `school_name`) |
+| `facultyId` | String | ❌ | Mã khoa (sẽ map thành `faculty_id`) |
+| `facultyName` | String | ❌ | Tên khoa (sẽ map thành `faculty_name`) |
+| `tags` | List<String> | ❌ | Tags |
+| `categories` | List<String> | ❌ | Danh mục |
 | `language` | String | ❌ | Mã ngôn ngữ (vi, en...) |
 | `status` | String | ❌ | `PUBLISHED` \| `DRAFT` \| `ARCHIVED` |
 | `visibility` | String | ❌ | `PUBLIC` \| `PRIVATE` \| `UNLISTED` |
@@ -263,12 +288,6 @@ Trả về trạng thái ES cluster, Redis, Kafka, Eureka.
 | `commentCount` | Long | ❌ | Số comment |
 | `score` | Float | ❌ | Điểm đánh giá |
 | `author` | Object | ❌* | Thông tin tác giả (required cho CREATE/UPDATE) |
-| `author.id` | String | ✅ | ID tác giả |
-| `author.username` | String | ❌ | Username |
-| `author.displayName` | String | ❌ | Tên hiển thị |
-| `author.email` | String | ❌ | Email |
-| `author.avatarUrl` | String | ❌ | URL avatar |
-| `author.role` | String | ❌ | Role |
 
 > 💡 Với event `DOCUMENT_DELETED`, chỉ cần gửi `eventType` và `id`.
 
@@ -384,6 +403,10 @@ Tất cả API search trả về format:
   "title": "Tiêu đề",
   "description": "Mô tả",
   "content": "Nội dung...",
+  "schoolId": "HCMUS",
+  "schoolName": "Trường Đại học Khoa học Tự nhiên",
+  "facultyId": "CNTT",
+  "facultyName": "Công nghệ thông tin",
   "tags": ["spring", "java"],
   "categories": ["Backend"],
   "language": "vi",
@@ -406,7 +429,9 @@ Tất cả API search trả về format:
   },
   "highlights": {
     "title": ["Tiêu đề có <em>từ khóa</em> highlight"],
-    "description": ["Mô tả có <em>từ khóa</em>"]
+    "school_name": ["<em>Truong Dai hoc</em> Khoa hoc Tu nhien"],
+    "faculty_name": ["<em>Cong nghe thong tin</em>"],
+    "content": ["Noi dung co <em>tu khoa</em>"]
   }
 }
 ```
@@ -489,8 +514,8 @@ Tất cả API search trả về format:
 ### Cho Frontend/Client
 
 - [ ] Gọi `GET /api/v1/search/documents` để search bài viết
+- [ ] Truyền thêm `school_id` / `faculty_id` khi cần lọc chính xác theo trường/khoa
 - [ ] Gọi `GET /api/v1/search/authors` để search tác giả
 - [ ] Gọi `GET /api/v1/search/documents/suggest` cho autocomplete
 - [ ] Xử lý pagination response format
 - [ ] Render HTML highlight tags (`<em>...</em>`)
-

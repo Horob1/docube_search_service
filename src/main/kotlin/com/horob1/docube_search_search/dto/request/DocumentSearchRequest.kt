@@ -13,5 +13,7 @@ data class DocumentSearchRequest(
     @field:Pattern(regexp = "asc|desc", message = "order must be: asc or desc")
     val order: String = "desc",
     val status: String? = null,
-    val authorId: String? = null
+    val authorId: String? = null,
+    val schoolId: String? = null,
+    val facultyId: String? = null
 )

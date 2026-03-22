@@ -16,6 +16,10 @@ class DocumentMapper {
             title = doc.title,
             description = doc.description,
             content = doc.content,
+            schoolId = doc.schoolId,
+            schoolName = doc.schoolName,
+            facultyId = doc.facultyId,
+            facultyName = doc.facultyName,
             tags = doc.tags,
             categories = doc.categories,
             language = doc.language,
@@ -48,6 +52,10 @@ class DocumentMapper {
             title = event.title,
             description = event.description,
             content = event.content,
+            schoolId = event.schoolId,
+            schoolName = event.schoolName,
+            facultyId = event.facultyId,
+            facultyName = event.facultyName,
             tags = event.tags,
             categories = event.categories,
             language = event.language,
@@ -73,4 +81,3 @@ class DocumentMapper {
         )
     }
 }
-

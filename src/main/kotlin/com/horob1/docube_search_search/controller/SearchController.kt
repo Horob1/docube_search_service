@@ -28,7 +28,9 @@ class SearchController(
         @RequestParam(defaultValue = "relevance") sortBy: String,
         @RequestParam(defaultValue = "desc") order: String,
         @RequestParam(required = false) status: String?,
-        @RequestParam(required = false) authorId: String?
+        @RequestParam(required = false) authorId: String?,
+        @RequestParam(name = "school_id", required = false) schoolId: String?,
+        @RequestParam(name = "faculty_id", required = false) facultyId: String?
     ): ResponseEntity<PageResponse<DocumentSearchResponse>> {
         val request = DocumentSearchRequest(
             keyword = keyword,
@@ -37,7 +39,9 @@ class SearchController(
             sortBy = sortBy,
             order = order,
             status = status,
-            authorId = authorId
+            authorId = authorId,
+            schoolId = schoolId,
+            facultyId = facultyId
         )
         return ResponseEntity.ok(documentSearchService.search(request))
     }
@@ -90,4 +94,3 @@ class SearchController(
         return ResponseEntity.ok(authorSearchService.popular(size))
     }
 }
-

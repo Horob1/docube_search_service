@@ -5,6 +5,10 @@ data class DocumentSearchResponse(
     val title: String?,
     val description: String?,
     val content: String?,
+    val schoolId: String?,
+    val schoolName: String?,
+    val facultyId: String?,
+    val facultyName: String?,
     val tags: List<String>?,
     val categories: List<String>?,
     val language: String?,
@@ -29,4 +33,3 @@ data class AuthorEmbeddedResponse(
     val avatarUrl: String?,
     val role: String?
 )
-

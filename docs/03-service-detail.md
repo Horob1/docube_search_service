@@ -1,9 +1,9 @@
 # 📖 Search Service — Tài liệu chi tiết (Service Documentation)
 
 > **Service:** Search Service (SS_DEV1)  
-> **Version:** 1.0.0  
+> **Version:** 1.1.0  
 > **Stack:** Kotlin, Spring Boot 3.x, Java 21, Elasticsearch 8.x, Kafka, Redis  
-> **Cập nhật:** 28/02/2026
+> **Cập nhật:** 22/03/2026
 
 ---
 
@@ -18,7 +18,8 @@
 7. [Error Handling & Resilience](#7-error-handling--resilience)
 8. [Configuration Reference](#8-configuration-reference)
 9. [Dependencies](#9-dependencies)
-10. [Deployment](#10-deployment)
+10. [Migration/Reindex (Alias Swap + Rollback)](#10-migrationreindex-alias-swap--rollback)
+11. [Deployment](#11-deployment)
 
 ---
 
@@ -152,6 +153,10 @@ src/main/resources/
 | `title` | text + keyword | autocomplete_analyzer | Tiêu đề (boost ×3) |
 | `description` | text | standard | Mô tả |
 | `content` | text | standard | Nội dung |
+| `school_id` | keyword | — | ID trường (filter exact match) |
+| `school_name` | text + keyword | standard | Tên trường (search + exact) |
+| `faculty_id` | keyword | — | ID khoa (filter exact match) |
+| `faculty_name` | text + keyword | standard | Tên khoa (search + exact) |
 | `tags` | keyword | — | Tags (array) |
 | `categories` | keyword | — | Danh mục (array) |
 | `language` | keyword | — | vi, en, ... |
@@ -220,10 +225,9 @@ src/main/resources/
 
 | Decision | Lý do |
 |----------|-------|
-| **Denormalized author** trong document | Tránh parent-child join → performance tốt hơn |
-| **Edge-ngram autocomplete** | Hỗ trợ tìm kiếm ngay khi gõ, không cần completion suggester |
-| **Keyword cho tags/categories** | Exact match filter, không cần full-text search |
-| **Shards: 1, Replicas: 0** (dev) | Đủ cho development. Production nên tăng replicas lên 1-2 |
+| **school/faculty top-level fields** | Filter bằng `term` không ảnh hưởng score, dễ mở rộng faceted search |
+| **Boost theo mức độ quan trọng** | `title^6` > `school_name/faculty_name^3` > `content^1` giúp relevance ổn định |
+| **Denormalized author** trong document | Tránh parent-child join -> performance tốt hơn |
 
 ---
 
@@ -307,29 +311,24 @@ Message ──▶ Consumer
 BoolQuery:
 ├── must:
 │   └── MultiMatch:
-│       ├── fields: title^3, description^2, content, author.displayName^2, author.username
+│       ├── fields: title^6, school_name^3, faculty_name^3, content^1
 │       ├── type: BEST_FIELDS
 │       └── fuzziness: AUTO
-├── filter:
-│   ├── term(status) — if provided
-│   └── term(author.id) — if provided
+├── filter (optional):
+│   ├── term(status)
+│   ├── term(author.id)
+│   ├── term(school_id)
+│   └── term(faculty_id)
 │
 ├── highlight:
-│   ├── title (pre: <em>, post: </em>)
-│   ├── description
-│   └── content
-│   ├── fragmentSize: 150
-│   └── numberOfFragments: 3
-│
-├── sort:
-│   ├── relevance → _score DESC
-│   ├── createdAt → createdAt ASC/DESC
-│   └── viewCount → viewCount ASC/DESC
-│
-└── pagination: PageRequest(page, size)
+│   ├── title
+│   ├── content
+│   ├── school_name
+│   └── faculty_name
 ```
 
-**Nếu keyword = null → `match_all` + filters**
+- Query được xây dựng theo bool query với `must + filter` để tránh duplicate scoring.
+- `filter` không tham gia tính điểm nên có hiệu năng tốt hơn khi dữ liệu lớn.
 
 ### 5.2. Author Search Query
 
@@ -556,7 +555,68 @@ spring.lifecycle.timeout-per-shutdown-phase=30s
 
 ---
 
-## 10. Deployment
+## 10. Migration/Reindex (Alias Swap + Rollback)
+
+### 10.1. Mục tiêu
+
+- Bổ sung mapping mới (`school_id`, `school_name`, `faculty_id`, `faculty_name`) mà không gây downtime.
+- Đảm bảo rollback nhanh nếu phát sinh lỗi relevance hoặc dữ liệu.
+
+### 10.2. Quy ước index/alias
+
+- Alias đọc/ghi ổn định: `documents`.
+- Index version hóa: `documents_v1`, `documents_v2`, ...
+
+### 10.3. Quy trình đề xuất
+
+1. Tạo index mới với mapping mới (ví dụ `documents_v2`).
+2. Reindex dữ liệu từ index cũ sang index mới.
+3. Verify: `_count`, sample query, highlight, filter `school_id/faculty_id`.
+4. Alias swap atomically: chuyển alias `documents` từ `documents_v1` sang `documents_v2`.
+5. Theo dõi logs/metrics 15-30 phút sau cutover.
+
+### 10.4. Lệnh mẫu (Elasticsearch API)
+
+```http
+PUT /documents_v2
+{ "settings": { "number_of_shards": 1, "number_of_replicas": 1 }, "mappings": { "properties": { "school_id": { "type": "keyword" }, "school_name": { "type": "text", "fields": { "keyword": { "type": "keyword" } } }, "faculty_id": { "type": "keyword" }, "faculty_name": { "type": "text", "fields": { "keyword": { "type": "keyword" } } } } } }
+```
+
+```http
+POST /_reindex
+{ "source": { "index": "documents_v1" }, "dest": { "index": "documents_v2" } }
+```
+
+```http
+POST /_aliases
+{
+  "actions": [
+    { "remove": { "index": "documents_v1", "alias": "documents" } },
+    { "add": { "index": "documents_v2", "alias": "documents" } }
+  ]
+}
+```
+
+### 10.5. Rollback
+
+Nếu có sự cố sau cutover:
+
+```http
+POST /_aliases
+{
+  "actions": [
+    { "remove": { "index": "documents_v2", "alias": "documents" } },
+    { "add": { "index": "documents_v1", "alias": "documents" } }
+  ]
+}
+```
+
+- Không xóa `documents_v1` ngay sau cutover.
+- Giữ lại index cũ tối thiểu 24-48 giờ để rollback an toàn.
+
+---
+
+## 11. Deployment
 
 ### Docker network
 
@@ -596,4 +656,3 @@ docker compose up -d
 - [ ] Cấu hình Kubernetes liveness/readiness probe tới `/actuator/health`
 - [ ] Monitor via Prometheus (`/actuator/prometheus`)
 - [ ] Giám sát Dead Letter Topics (`.DLT`)
-
